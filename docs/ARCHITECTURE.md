@@ -24,8 +24,9 @@ Contém tudo relacionado à aplicação executada pelo usuário.
 
 Pacotes:
 
-- `client.interfaces`: interfaces gráficas desenvolvidas com Java Swing.
-- `client.communication`: conexão com o servidor, envio de requisições e recebimento de respostas.
+- `client.interfaces`: janela Swing, tabelas, filtros e diálogos escritos manualmente.
+- `client.communication`: cliente de socket TCP que envia e recebe JSON em UTF-8.
+- `client.ClientApp`: ponto de entrada gráfico do cliente.
 
 Responsabilidades:
 
@@ -50,7 +51,7 @@ Classes principais:
 - `Server.java`: inicia o servidor e aguarda conexões.
 - `ClientHandler.java`: gerencia a comunicação com um cliente conectado.
 - `RequestHandler.java`: interpreta as requisições e direciona cada operação.
-- `server.services`: contém as regras de negócio.
+- `server.services`: contém autenticação, sessões, regras de viagem e consultas de transporte.
 
 Responsabilidades:
 
@@ -72,7 +73,7 @@ O servidor não deve executar comandos SQL diretamente. O acesso aos dados deve 
 Pacotes:
 
 - `datamanager`: conexão com o banco.
-- `datamanager.dao`: objetos responsáveis pelas operações de acesso aos dados.
+- `datamanager.dao`: `UserDao`, `TripDao`, `VehicleDao` e `ScheduleDao`.
 
 Responsabilidades:
 
@@ -89,15 +90,14 @@ Os DAOs devem esconder os detalhes de SQL das demais camadas.
 
 Contém as classes que representam os objetos principais do sistema.
 
-Classes previstas:
+Classes do modelo atualmente implementadas:
 
 | Classe | Responsabilidade |
 |---|---|
-| `User` | Representar usuários e motoristas |
-| `Vehicle` | Representar os veículos |
-| `Trip` | Representar uma viagem |
-| `Location` | Representar uma posição geográfica |
-| `Schedule` | Representar horários do transporte |
+| `UserCredential` | Dados necessários para validar uma conta de motorista |
+| `UserSession` | Sessão autenticada de curta duração mantida na memória do servidor |
+| `ActiveVehicle` | Veículo em viagem e sua última coordenada |
+| `ScheduleEntry` | Horário de partida de um veículo |
 
 Essas classes poderão ser utilizadas tanto pelo Client quanto pelo Server e DataManager, quando necessário.
 
@@ -105,7 +105,7 @@ Essas classes poderão ser utilizadas tanto pelo Client quanto pelo Server e Dat
 
 Contém componentes compartilhados entre o Client e o Server.
 
-O pacote `common.protocol` será responsável por definir as operações e estruturas utilizadas na comunicação.
+O pacote `common.protocol` define os campos e nomes de operação usados pelo cliente e servidor. Gson serializa e interpreta os objetos JSON.
 
 Isso evita que cada integrante implemente nomes e formatos diferentes para as mesmas operações.
 

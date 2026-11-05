@@ -51,8 +51,8 @@ CREATE TABLE IF NOT EXISTS trips (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     driver_id BIGINT NOT NULL,
     vehicle_id BIGINT NOT NULL,
-    start_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_time DATETIME,
+    start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     direction VARCHAR(50) NOT NULL,
 
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS locations (
     trip_id BIGINT NOT NULL,
     latitude DECIMAL(10, 7) NOT NULL,
     longitude DECIMAL(10, 7) NOT NULL,
-    recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_locations_trip
         FOREIGN KEY (trip_id)
@@ -118,5 +118,7 @@ CREATE TABLE IF NOT EXISTS schedules (
     CONSTRAINT chk_schedules_day_type
         CHECK (day_type IN ('WEEKDAY', 'SATURDAY', 'SUNDAY', 'HOLIDAY')),
 
-    INDEX idx_schedules_search (direction, day_type, departure_time)
+    INDEX idx_schedules_search (direction, day_type, departure_time),
+    UNIQUE KEY uq_schedules_vehicle_departure_direction_day
+        (vehicle_id, departure_time, direction, day_type)
 ) ENGINE=InnoDB;

@@ -24,6 +24,8 @@ O script `schema.sql` cria automaticamente o banco `location_tracking`, caso ele
 5. Atualize a lista de schemas.
 6. Verifique se o banco `location_tracking` e suas tabelas foram criados.
 
+Para carregar horários fictícios sem dados pessoais, execute `database/sample-data.sql` depois do schema.
+
 ### Pelo terminal
 
 Execute:
@@ -60,6 +62,7 @@ Digite a senha quando solicitado.
 - Cada registro de localização deve estar associado a uma viagem.
 - As coordenadas devem respeitar os limites geográficos válidos.
 - Operações de escrita e leitura devem utilizar PreparedStatement através dos DAOs.
+- A URL JDBC de exemplo configura a sessão MySQL em UTC para alinhar os campos `TIMESTAMP` com os instantes ISO-8601 do protocolo.
 
 A aplicação deverá controlar, na camada de serviços, se um veículo ou motorista já possui uma viagem ativa antes de iniciar outra.
 

@@ -1,137 +1,110 @@
 # Protocolo de Comunicação — Location Tracking System
 
-## 1. Objetivo
+## Transporte
 
-Este documento define o padrão de comunicação entre o Client e o Server do Location Tracking System.
+- Transporte TCP com Java Sockets.
+- Codificação UTF-8.
+- Uma mensagem JSON compacta por linha (`\n`).
+- Após abrir a conexão, o cliente envia requisições e o servidor responde na mesma conexão. Não há mensagem de boas-vindas fora do protocolo.
+- Cada resposta repete o `requestId` da requisição correspondente.
 
-O objetivo é garantir que os dois componentes utilizem os mesmos formatos de mensagens, nomes de operações e estruturas de resposta, permitindo o desenvolvimento independente das duas partes.
-
-## 2. Tecnologia de comunicação
-
-A comunicação será realizada utilizando:
-
-- **Java Sockets:** estabelecimento da conexão TCP.
-- **JSON:** formato de representação das mensagens.
-- **UTF-8:** codificação dos caracteres.
-- **Uma mensagem por linha:** cada mensagem JSON será finalizada com `\n`.
-
-O servidor poderá atender vários clientes simultaneamente, utilizando uma Thread independente para cada conexão.
-
-### 2.1 Formato geral
-
-Toda requisição deverá seguir esta estrutura:
+## Requisição
 
 ```json
 {
-  "requestId": "123",
-  "operation": "NOME_DA_OPERACAO",
-  "data": {
-    "campo": "valor"
-  }
+  "requestId": "req-001",
+  "operation": "GET_ACTIVE_VEHICLES",
+  "data": {}
 }
 ```
 
-Campos:
+`requestId` e `operation` são strings obrigatórias; `data` deve ser um objeto JSON. O identificador deve ser único entre requisições pendentes do cliente e ter no máximo 128 caracteres.
 
-| Campo | Descrição |
-|---|---|
-| `requestId` | Identificador da requisição, utilizado para relacionar a resposta à solicitação original |
-| `operation` | Nome da operação solicitada |
-| `data` | Objeto contendo os parâmetros da operação |
+## Resposta
 
-O `requestId` deverá ser enviado como string e repetido na resposta correspondente.
-
-### 2.2 Formato das respostas
-
-Resposta de sucesso:
+Sucesso:
 
 ```json
 {
-  "requestId": "123",
+  "requestId": "req-001",
   "status": "OK",
-  "data": {
-    "message": "Operation completed"
-  }
+  "data": {}
 }
 ```
 
-Resposta de erro:
+Erro:
 
 ```json
 {
-  "requestId": "123",
+  "requestId": "req-001",
   "status": "ERROR",
   "error": {
-    "code": "INVALID_CREDENTIALS",
-    "message": "Invalid email or password"
+    "code": "INVALID_REQUEST",
+    "message": "Descrição legível do erro."
   }
 }
 ```
 
-Campos:
+Uma resposta contém `data` ou `error`, nunca ambos. Se o JSON for inválido ou não contiver um `requestId` string, a resposta de erro poderá omitir `requestId`.
 
-| Campo | Descrição |
-|---|---|
-| `requestId` | Identificador da requisição original |
-| `status` | Resultado da operação: `OK` ou `ERROR` |
-| `data` | Informações retornadas em caso de sucesso |
-| `error` | Código e descrição do erro |
+## Operações
 
-Em cada resposta, deverá existir apenas `data` ou `error`, conforme o resultado.
+### `LOGIN`
 
-## 3. Operações disponíveis
+Requisição: `{ "email": "driver@example.org", "password": "senha" }`
 
-### 3.1 LOGIN
+Sucesso: `{ "userId": 10, "name": "Motorista", "role": "DRIVER", "token": "...", "activeTripId": null }`
 
-Autentica um usuário no sistema.
+`activeTripId` contém o identificador da viagem ativa do motorista quando houver, ou `null` caso contrário. Ele permite retomar uma viagem após fechar e reabrir o cliente.
 
-Requisição:
+A senha trafega apenas para autenticação e deve ser armazenada no banco como hash seguro, nunca em texto puro. O token será exigido nas operações de motorista.
 
-```json
-{
-  "requestId": "1",
-  "operation": "LOGIN",
-  "data": {
-    "email": "motorista@email.com",
-    "password": "senha"
-  }
-}
-```
+### `START_TRIP`
 
-Resposta de sucesso:
+Requisição: `{ "token": "...", "vehicleId": 5, "direction": "CAMPUS" }`
 
-```json
-{
-  "requestId": "1",
-  "status": "OK",
-  "data": {
-    "userId": 10,
-    "name": "Motorista",
-    "role": "DRIVER",
-    "token": "session-token"
-  }
-}
-```
+Sucesso: `{ "tripId": 101, "startedAt": "2026-11-04T12:00:00Z" }`
 
-O servidor deverá validar as credenciais e retornar os dados necessários para identificar o usuário autenticado.
+### `UPDATE_LOCATION`
 
-A senha nunca deverá ser armazenada em texto puro no banco de dados. A autenticação deverá utilizar senhas protegidas por hash seguro.
+Requisição: `{ "token": "...", "tripId": 101, "latitude": -23.6, "longitude": -46.6, "recordedAt": "2026-11-04T12:01:00Z" }`
 
-### 3.2 START_TRIP
+Sucesso: `{ "recorded": true }`
 
-Inicia uma nova viagem.
+Latitude deve estar entre -90 e 90; longitude entre -180 e 180. `recordedAt` é opcional; se ausente, o servidor define o horário.
 
-Requisição:
+### `GET_ACTIVE_VEHICLES`
 
-```json
-{
-  "requestId": "2",
-  "operation": "START_TRIP",
-  "data": {
-    "vehicleId": 5,
-    "direction": "CAMPUS"
-  }
-}
-```
+Requisição: `{}`
 
-Resposta
+Sucesso: `{ "vehicles": [{ "vehicleId": 5, "identification": "Circular 1", "direction": "CAMPUS", "latitude": -23.6, "longitude": -46.6, "recordedAt": "2026-11-04T12:01:00Z" }] }`
+
+### `GET_SCHEDULE`
+
+Requisição: `{ "direction": "CAMPUS", "dayType": "WEEKDAY" }`
+
+`direction` e `dayType` podem ser omitidos para consultar todos os horários ativos.
+
+Sucesso: `{ "schedules": [{ "vehicleId": 5, "departureTime": "08:30", "direction": "CAMPUS", "dayType": "WEEKDAY" }] }`
+
+### `END_TRIP`
+
+Requisição: `{ "token": "...", "tripId": 101 }`
+
+Sucesso: `{ "tripId": 101, "endedAt": "2026-11-04T13:00:00Z", "status": "FINISHED" }`
+
+## Códigos de erro
+
+- `INVALID_REQUEST`: JSON malformado, campos obrigatórios ausentes ou inválidos.
+- `UNKNOWN_OPERATION`: operação não reconhecida.
+- `INVALID_CREDENTIALS`: credenciais inválidas.
+- `UNAUTHORIZED`: token inválido ou ausente.
+- `NOT_FOUND`: usuário, veículo, viagem ou horário inexistente.
+- `CONFLICT`: motorista ou veículo já está em uma viagem ativa.
+- `VALIDATION_ERROR`: dados fora do domínio aceito.
+- `INTERNAL_ERROR`: falha inesperada; detalhes internos não são enviados ao cliente.
+- `NOT_IMPLEMENTED`: operação ainda indisponível durante o desenvolvimento.
+
+## Compatibilidade
+
+Os exemplos definem o contrato compartilhado pelo cliente e servidor. Alterações devem ser refletidas neste documento e implementadas nos dois lados na mesma mudança. Datas e horários devem ser enviados em ISO-8601; instantes devem incluir fuso horário.

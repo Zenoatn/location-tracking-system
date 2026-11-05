@@ -36,13 +36,9 @@ public class ClientHandler implements Runnable {
             )
         ) {
 
-            output.println("OK|Conexao estabelecida");
-
             String request;
 
             while ((request = input.readLine()) != null) {
-
-                System.out.println("Requisicao: " + request);
 
                 String response = requestHandler.process(request);
 

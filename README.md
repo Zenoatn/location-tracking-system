@@ -25,10 +25,14 @@ O sistema permitirá:
 | Java Swing | Interfaces gráficas |
 | Java Sockets | Comunicação Cliente-Servidor |
 | Threads | Atendimento simultâneo de clientes |
+| Gson | Serialização e leitura do protocolo JSON |
 | MySQL | Banco de dados |
 | JDBC | Comunicação com o banco |
 | Maven | Gerenciamento do projeto e dependências |
 | AWS | Hospedagem da aplicação |
+
+O cliente e o servidor trocam objetos JSON em linhas UTF-8 usando Gson, sobre Java Sockets.
+Gson é permitido pelo professor; outras dependências permanecem subordinadas aos requisitos do trabalho.
 
 ## 3. Arquitetura do sistema
 
@@ -135,12 +139,27 @@ Executar o script `database/schema.sql` após sua disponibilização.
 No PowerShell:
 
 ```powershell
-$env:DB_URL="jdbc:mysql://localhost:3306/location_tracking"
+$env:DB_URL="jdbc:mysql://localhost:3306/location_tracking?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true"
 $env:DB_USER="root"
 $env:DB_PASSWORD="SUA_SENHA"
+$env:SERVER_HOST="localhost"
+$env:SERVER_PORT="5000"
+$env:SERVER_TLS_ENABLED="false"
 ```
 
 As credenciais não devem ser adicionadas ao código-fonte ou ao GitHub.
+
+### Executar localmente no VS Code
+
+1. Crie o schema executando `database/schema.sql` e, para horários de demonstração, `database/sample-data.sql`.
+2. Configure as variáveis de ambiente em um terminal/perfil de execução local.
+3. Execute `br.edu.maua.server.Server`.
+4. Execute `br.edu.maua.datamanager.DriverAccountSetup` para cadastrar um motorista pela tela Swing. A senha é gravada somente como hash.
+5. Execute `br.edu.maua.client.ClientApp`. O usuário opera o cliente pela interface Swing.
+
+Para uma conexão remota, configure `SERVER_TLS_ENABLED=true` no cliente e no servidor. O servidor exige um keystore PKCS12 (`SERVER_TLS_KEYSTORE_PATH` e `SERVER_TLS_KEYSTORE_PASSWORD`) com certificado cujo nome corresponda ao DNS usado pelo cliente. Em desenvolvimento local, a configuração de exemplo usa TCP sem TLS.
+
+No VS Code, os três pontos de entrada podem ser iniciados pelas classes Java correspondentes. A tela de criação de conta é apenas para configuração administrativa; o usuário final opera o cliente pela interface Swing.
 
 ## 6. Divisão de responsabilidades
 
@@ -187,21 +206,25 @@ As funcionalidades deverão ser integradas através de Pull Requests.
 
 - [x] Configuração inicial do Maven.
 - [x] Estrutura inicial dos pacotes.
-- [x] Servidor TCP funcional.
-- [x] Comunicação básica entre cliente e servidor.
-- [x] Atendimento de conexões utilizando Threads.
-- [x] Estrutura inicial do protocolo de comunicação.
+- [x] Servidor TCP aceita conexões concorrentes usando Threads.
+- [x] Contrato JSON por linha documentado e processado com Gson.
 - [x] Instalação do MySQL Server.
-- [x] Integração JDBC e teste de conexão.
-- [ ] Definição definitiva do protocolo.
-- [ ] Modelagem e criação das tabelas.
-- [ ] Implementação dos DAOs.
-- [ ] Implementação da autenticação.
-- [ ] Desenvolvimento das interfaces gráficas.
-- [ ] Compartilhamento de localização.
-- [ ] Internacionalização.
-- [ ] Hospedagem na AWS.
-- [ ] Testes de integração.
+- [x] Esquema MySQL inicial, DAOs e consultas JDBC para veículos e horários.
+- [x] Autenticação de motorista, início/fim de viagem e registro de coordenadas implementados.
+- [x] Cliente Swing com atualização de veículos/horários e ações do motorista.
+- [x] Componentes Swing exigidos, cinco idiomas, leitura/escrita de texto e exportação criptografada implementados.
+- [ ] Captura automática de localização de um dispositivo GPS (a interface atual recebe coordenadas do motorista).
+- [ ] Compilação e demonstração integrada (ainda não verificadas neste ambiente).
+- [ ] Revisão final do modelo e dos dados de demonstração.
+- [ ] Documentação técnica completa em formato ABNT e apresentação PowerPoint.
+- [ ] Configuração de certificados TLS e JDBC TLS para uso remoto.
+- [ ] Implantação AWS (ver `docs/DEPLOYMENT_AWS.md`); nenhum recurso foi criado.
+- [ ] Apresentação e entrega em 01/12/2026.
+
+O código assinalado como implementado ainda precisa de compilação e demonstração com MySQL. Esta cópia de trabalho ainda não foi verificada em execução.
+
+O estado por requisito da especificação da disciplina está acompanhado em
+[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md).
 
 ## 10. Objetivo
 
