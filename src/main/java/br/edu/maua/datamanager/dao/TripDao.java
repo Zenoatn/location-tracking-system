@@ -28,13 +28,41 @@ public class TripDao {
         try (Connection connection = DatabaseConnection.getConnection()) {
             connection.setAutoCommit(false);
             try {
-                if (!existsForUpdate(connection,
-                        "SELECT id FROM users WHERE id = ? AND active = TRUE FOR UPDATE", driverId)) {
+                String userStatus = null;
+                Long reservedVehicle = null;
+                try (PreparedStatement user = connection.prepareStatement(
+                        "SELECT current_status, current_vehicle_id FROM users "
+                                + "WHERE id = ? AND active = TRUE FOR UPDATE")) {
+                    user.setLong(1, driverId);
+                    try (ResultSet row = user.executeQuery()) {
+                        if (row.next()) {
+                            userStatus = row.getString("current_status");
+                            long vehicle = row.getLong("current_vehicle_id");
+                            if (!row.wasNull()) reservedVehicle = vehicle;
+                        }
+                    }
+                }
+                if (userStatus == null) {
                     connection.rollback();
                     return new StartResult(StartStatus.DRIVER_UNAVAILABLE, 0, null);
                 }
                 if (!existsForUpdate(connection,
                         "SELECT id FROM vehicles WHERE id = ? AND active = TRUE FOR UPDATE", vehicleId)) {
+                    connection.rollback();
+                    return new StartResult(StartStatus.VEHICLE_UNAVAILABLE, 0, null);
+                }
+                try (PreparedStatement reserved = connection.prepareStatement(
+                        "SELECT id FROM users WHERE current_vehicle_id = ? AND id <> ? FOR UPDATE")) {
+                    reserved.setLong(1, vehicleId); reserved.setLong(2, driverId);
+                    try (ResultSet row = reserved.executeQuery()) {
+                        if (row.next()) { connection.rollback(); return new StartResult(StartStatus.VEHICLE_UNAVAILABLE, 0, null); }
+                    }
+                }
+                if (!"AVAILABLE".equals(userStatus) && !"WAITING".equals(userStatus)) {
+                    connection.rollback();
+                    return new StartResult(StartStatus.ACTIVE_TRIP_EXISTS, 0, null);
+                }
+                if ("WAITING".equals(userStatus) && !Long.valueOf(vehicleId).equals(reservedVehicle)) {
                     connection.rollback();
                     return new StartResult(StartStatus.VEHICLE_UNAVAILABLE, 0, null);
                 }
@@ -70,8 +98,75 @@ public class TripDao {
                         tripId = keys.getLong(1);
                     }
                 }
+                try (PreparedStatement update = connection.prepareStatement(
+                        "UPDATE users SET current_status = 'ON_TRIP', current_vehicle_id = ?, "
+                                + "waiting_location = NULL WHERE id = ?")) {
+                    update.setLong(1, vehicleId);
+                    update.setLong(2, driverId);
+                    update.executeUpdate();
+                }
                 connection.commit();
                 return new StartResult(StartStatus.STARTED, tripId, startedAt);
+            } catch (SQLException | RuntimeException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        }
+    }
+
+    public StateResult declareWait(long driverId, long vehicleId, String location) throws SQLException {
+        try (Connection connection = DatabaseConnection.getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                String status;
+                try (PreparedStatement user = connection.prepareStatement(
+                        "SELECT current_status FROM users WHERE id = ? AND active = TRUE FOR UPDATE")) {
+                    user.setLong(1, driverId);
+                    try (ResultSet row = user.executeQuery()) {
+                        if (!row.next()) return rollbackState(connection, StateResult.DRIVER_UNAVAILABLE);
+                        status = row.getString("current_status");
+                    }
+                }
+                if (!"AVAILABLE".equals(status)) return rollbackState(connection, StateResult.INVALID_STATE);
+                if (!existsForUpdate(connection,
+                        "SELECT id FROM vehicles WHERE id = ? AND active = TRUE FOR UPDATE", vehicleId)) {
+                    return rollbackState(connection, StateResult.VEHICLE_UNAVAILABLE);
+                }
+                try (PreparedStatement reserved = connection.prepareStatement(
+                        "SELECT id FROM users WHERE current_vehicle_id = ? AND id <> ? FOR UPDATE")) {
+                    reserved.setLong(1, vehicleId); reserved.setLong(2, driverId);
+                    try (ResultSet row = reserved.executeQuery()) {
+                        if (row.next()) return rollbackState(connection, StateResult.VEHICLE_UNAVAILABLE);
+                    }
+                }
+                try (PreparedStatement update = connection.prepareStatement(
+                        "UPDATE users SET current_status = 'WAITING', current_vehicle_id = ?, "
+                                + "waiting_location = ? WHERE id = ? AND current_status = 'AVAILABLE'")) {
+                    update.setLong(1, vehicleId);
+                    update.setString(2, location);
+                    update.setLong(3, driverId);
+                    if (update.executeUpdate() == 0) return rollbackState(connection, StateResult.INVALID_STATE);
+                }
+                connection.commit();
+                return StateResult.OK;
+            } catch (SQLException | RuntimeException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        }
+    }
+
+    public StateResult cancelWait(long driverId) throws SQLException {
+        try (Connection connection = DatabaseConnection.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement update = connection.prepareStatement(
+                    "UPDATE users SET current_status = 'AVAILABLE', current_vehicle_id = NULL, "
+                            + "waiting_location = NULL WHERE id = ? AND active = TRUE "
+                            + "AND current_status = 'WAITING'")) {
+                update.setLong(1, driverId);
+                int changed = update.executeUpdate();
+                connection.commit();
+                return changed == 0 ? StateResult.INVALID_STATE : StateResult.OK;
             } catch (SQLException | RuntimeException exception) {
                 connection.rollback();
                 throw exception;
@@ -112,19 +207,27 @@ public class TripDao {
         try (Connection connection = DatabaseConnection.getConnection()) {
             connection.setAutoCommit(false);
             try {
+                try (PreparedStatement lock = connection.prepareStatement(
+                        "SELECT id FROM users WHERE id = ? AND active = TRUE FOR UPDATE")) {
+                    lock.setLong(1, driverId);
+                    try (ResultSet row = lock.executeQuery()) {
+                        if (!row.next()) { connection.rollback(); return new EndResult(false, null); }
+                    }
+                }
                 Instant endedAt = Instant.now();
-                String updateSql = "UPDATE trips SET status = 'FINISHED', end_time = ? "
-                        + "WHERE id = ? AND driver_id = ? AND status = 'ACTIVE' "
-                        + "AND EXISTS (SELECT 1 FROM users WHERE id = ? AND active = TRUE)";
-                try (PreparedStatement update = connection.prepareStatement(updateSql)) {
+                try (PreparedStatement update = connection.prepareStatement(
+                        "UPDATE trips SET status = 'FINISHED', end_time = ? WHERE id = ? "
+                                + "AND driver_id = ? AND status = 'ACTIVE'")) {
                     update.setTimestamp(1, Timestamp.from(endedAt));
                     update.setLong(2, tripId);
                     update.setLong(3, driverId);
-                    update.setLong(4, driverId);
-                    if (update.executeUpdate() == 0) {
-                        connection.rollback();
-                        return new EndResult(false, null);
-                    }
+                    if (update.executeUpdate() == 0) { connection.rollback(); return new EndResult(false, null); }
+                }
+                try (PreparedStatement update = connection.prepareStatement(
+                        "UPDATE users SET current_status = 'AVAILABLE', current_vehicle_id = NULL, "
+                                + "waiting_location = NULL WHERE id = ? AND current_status = 'ON_TRIP'")) {
+                    update.setLong(1, driverId);
+                    if (update.executeUpdate() == 0) { connection.rollback(); return new EndResult(false, null); }
                 }
                 connection.commit();
                 return new EndResult(true, endedAt);
@@ -133,6 +236,11 @@ public class TripDao {
                 throw exception;
             }
         }
+    }
+
+    private StateResult rollbackState(Connection connection, StateResult result) throws SQLException {
+        connection.rollback();
+        return result;
     }
 
     private boolean existsForUpdate(Connection connection, String sql, long id) throws SQLException {
@@ -153,6 +261,7 @@ public class TripDao {
     }
 
     public enum StartStatus { STARTED, DRIVER_UNAVAILABLE, VEHICLE_UNAVAILABLE, ACTIVE_TRIP_EXISTS }
+    public enum StateResult { OK, DRIVER_UNAVAILABLE, VEHICLE_UNAVAILABLE, INVALID_STATE }
 
     public record StartResult(StartStatus status, long tripId, Instant startedAt) { }
 

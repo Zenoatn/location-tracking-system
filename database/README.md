@@ -34,6 +34,10 @@ Execute:
 mysql -u root -p < database/schema.sql
 ```
 
+### Atualizar uma instalação existente
+
+Faça backup, execute `migration_001_preflight.sql` e confirme que as três consultas não retornam linhas; identifique manualmente os tipos ainda não mapeados. Depois execute uma única vez `migration_001_operational_states.sql`. A migração preserva viagens e horários, mantém os códigos `CAMPUS`/`CENTRO`, recupera reservas para viagens ativas e normaliza tipos conhecidos (`BUS`→`ONIBUS`, rótulos de micro-ônibus→`MICRO_ONIBUS`). Não reaplique a migração.
+
 Digite a senha quando solicitado.
 
 ## 4. Estrutura das tabelas
@@ -52,6 +56,9 @@ Digite a senha quando solicitado.
 - `vehicles` → `trips`: um veículo pode participar de várias viagens.
 - `trips` → `locations`: uma viagem pode possuir vários registros de localização.
 - `vehicles` → `schedules`: um veículo pode possuir vários horários cadastrados.
+- `users.current_vehicle_id` → `vehicles.id`: reserva exclusiva durante `WAITING` ou `ON_TRIP`.
+
+`current_status` aceita `AVAILABLE`, `WAITING` e `ON_TRIP`. Um índice único protege a reserva; índices únicos gerados em `trips` impedem viagens ativas duplicadas por motorista ou veículo.
 
 ## 6. Regras importantes
 

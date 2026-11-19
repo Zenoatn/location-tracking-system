@@ -13,20 +13,27 @@ public class ScheduleDao {
 
     public List<ScheduleEntry> findActive(String direction, String dayType) throws SQLException {
         StringBuilder sql = new StringBuilder("""
-                SELECT vehicle_id, departure_time, direction, day_type
-                FROM schedules
-                WHERE active = TRUE
+                SELECT s.vehicle_id, v.identification, v.type,
+                       s.departure_time, s.direction, s.day_type
+                FROM schedules s JOIN vehicles v ON v.id = s.vehicle_id
+                WHERE s.active = TRUE
                 """);
         List<String> parameters = new ArrayList<>();
         if (direction != null) {
-            sql.append(" AND direction = ?");
-            parameters.add(direction);
+            if ("CAMPUS".equals(direction) || "ESTACAO_TO_IMT".equals(direction) || "TO_IMT".equals(direction)) {
+                sql.append(" AND s.direction IN ('CAMPUS', 'ESTACAO_TO_IMT', 'TO_IMT')");
+            } else if ("CENTRO".equals(direction) || "IMT_TO_ESTACAO".equals(direction) || "TO_ESTACAO".equals(direction)) {
+                sql.append(" AND s.direction IN ('CENTRO', 'IMT_TO_ESTACAO', 'TO_ESTACAO')");
+            } else {
+                sql.append(" AND s.direction = ?");
+                parameters.add(direction);
+            }
         }
         if (dayType != null) {
-            sql.append(" AND day_type = ?");
+            sql.append(" AND s.day_type = ?");
             parameters.add(dayType);
         }
-        sql.append(" ORDER BY departure_time, direction");
+        sql.append(" ORDER BY s.departure_time, s.direction");
 
         List<ScheduleEntry> schedules = new ArrayList<>();
         try (Connection connection = DatabaseConnection.getConnection();
@@ -37,7 +44,8 @@ public class ScheduleDao {
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) {
                     schedules.add(new ScheduleEntry(
-                            result.getLong("vehicle_id"),
+                            result.getLong("vehicle_id"), result.getString("identification"),
+                            result.getString("type"),
                             result.getTime("departure_time").toString(),
                             result.getString("direction"),
                             result.getString("day_type")));

@@ -58,8 +58,12 @@ public class RequestHandler {
             return switch (operation) {
                 case Protocol.GET_ACTIVE_VEHICLES -> activeVehicles(requestId);
                 case Protocol.GET_SCHEDULE -> schedules(requestId, data);
+                case Protocol.GET_AVAILABLE_VEHICLES -> availableVehicles(requestId, data);
+                case Protocol.GET_WAITING_DRIVERS -> waitingDrivers(requestId, data);
                 case Protocol.LOGIN -> login(requestId, data);
                 case Protocol.START_TRIP -> startTrip(requestId, data);
+                case Protocol.DECLARE_WAIT -> declareWait(requestId, data);
+                case Protocol.CANCEL_WAIT -> cancelWait(requestId, data);
                 case Protocol.UPDATE_LOCATION -> updateLocation(requestId, data);
                 case Protocol.END_TRIP -> endTrip(requestId, data);
                 default -> error(requestId, Protocol.UNKNOWN_OPERATION, "Operação desconhecida.");
@@ -120,6 +124,15 @@ public class RequestHandler {
         data.addProperty("name", session.name());
         data.addProperty("role", session.role());
         data.addProperty("token", session.token());
+        data.addProperty("currentStatus", session.currentStatus());
+        if (session.currentVehicleId() == null) data.add("currentVehicleId", com.google.gson.JsonNull.INSTANCE);
+        else data.addProperty("currentVehicleId", session.currentVehicleId());
+        if (session.waitingLocation() == null) data.add("waitingLocation", com.google.gson.JsonNull.INSTANCE);
+        else data.addProperty("waitingLocation", session.waitingLocation());
+        if (session.currentVehicleIdentification() == null) data.add("currentVehicleIdentification", com.google.gson.JsonNull.INSTANCE);
+        else data.addProperty("currentVehicleIdentification", session.currentVehicleIdentification());
+        if (session.currentVehicleType() == null) data.add("currentVehicleType", com.google.gson.JsonNull.INSTANCE);
+        else data.addProperty("currentVehicleType", session.currentVehicleType());
         Long activeTripId = "DRIVER".equals(session.role())
                 ? tripService.findActiveTrip(session.token()) : null;
         if (activeTripId == null) {
@@ -128,6 +141,37 @@ public class RequestHandler {
             data.addProperty("activeTripId", activeTripId);
         }
         return success(requestId, data);
+    }
+
+    private String availableVehicles(String requestId, JsonObject requestData)
+            throws java.sql.SQLException, OperationException {
+        String token = optionalString(requestData, "token");
+        if (token != null) tripService.driverId(token);
+        JsonObject data = new JsonObject();
+        data.add("vehicles", GSON.toJsonTree(transportService.getAvailableVehicles()));
+        return success(requestId, data);
+    }
+
+    private String waitingDrivers(String requestId, JsonObject requestData) throws java.sql.SQLException {
+        String location = optionalString(requestData, "location");
+        if (location != null && !java.util.Set.of("IMT", "ESTACAO").contains(location))
+            throw new IllegalArgumentException("location must be IMT or ESTACAO");
+        JsonObject data = new JsonObject();
+        data.add("drivers", GSON.toJsonTree(transportService.getWaitingDrivers(location)));
+        return success(requestId, data);
+    }
+
+    private String declareWait(String requestId, JsonObject requestData)
+            throws java.sql.SQLException, OperationException {
+        tripService.declareWait(requiredString(requestData, "token"),
+                requiredLong(requestData, "vehicleId"), requiredString(requestData, "waitingLocation"));
+        return success(requestId, new JsonObject());
+    }
+
+    private String cancelWait(String requestId, JsonObject requestData)
+            throws java.sql.SQLException, OperationException {
+        tripService.cancelWait(requiredString(requestData, "token"));
+        return success(requestId, new JsonObject());
     }
 
     private String startTrip(String requestId, JsonObject requestData)

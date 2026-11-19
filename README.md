@@ -104,7 +104,7 @@ location-tracking-system/
 
 ### Requisitos
 
-- JDK 26 (versão atualmente utilizada no ambiente inicial de desenvolvimento).
+- JDK 21 ou superior.
 - Apache Maven 3.10.0.
 - MySQL Server 8.0.
 - Visual Studio Code.
@@ -132,7 +132,7 @@ Criar o banco MySQL:
 CREATE DATABASE location_tracking;
 ```
 
-Executar o script `database/schema.sql` após sua disponibilização.
+Execute `database/schema.sql` em uma instalação nova. Para atualizar uma instalação criada com o schema anterior, siga a migração descrita em `database/README.md`.
 
 ### Configurar variáveis de ambiente
 
@@ -155,7 +155,7 @@ As credenciais não devem ser adicionadas ao código-fonte ou ao GitHub.
 2. Configure as variáveis de ambiente em um terminal/perfil de execução local.
 3. Execute `br.edu.maua.server.Server`.
 4. Execute `br.edu.maua.datamanager.DriverAccountSetup` para cadastrar um motorista pela tela Swing. A senha é gravada somente como hash.
-5. Execute `br.edu.maua.client.ClientApp`. O usuário opera o cliente pela interface Swing.
+5. Execute `br.edu.maua.client.driver.DriverApp` para o colaborador ou `br.edu.maua.client.passenger.PassengerApp` para o passageiro. `br.edu.maua.client.ClientApp` permanece disponível como interface legada.
 
 Para uma conexão remota, configure `SERVER_TLS_ENABLED=true` no cliente e no servidor. O servidor exige um keystore PKCS12 (`SERVER_TLS_KEYSTORE_PATH` e `SERVER_TLS_KEYSTORE_PASSWORD`) com certificado cujo nome corresponda ao DNS usado pelo cliente. Em desenvolvimento local, a configuração de exemplo usa TCP sem TLS.
 
@@ -225,6 +225,15 @@ O código assinalado como implementado ainda precisa de compilação e demonstra
 
 O estado por requisito da especificação da disciplina está acompanhado em
 [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md).
+
+### Clientes do projeto
+
+- O cliente do colaborador recupera estado, reserva veículo, declara/cancela espera e inicia/encerra viagens.
+- O cliente do passageiro mostra veículos, mapa estático, espera e consulta de horários.
+- A localização disponível é informada manualmente e identificada como tal; nenhuma coordenada é inventada.
+- Maps/ETA exigem `MAPS_STATIC_API_KEY`, `GOOGLE_MAPS_ROUTES_API_KEY` e coordenadas confirmadas em `.env.example`. Sem configuração, as funções restantes continuam disponíveis.
+
+Integração baseada nas documentações oficiais [Maps Static API](https://developers.google.com/maps/documentation/maps-static/start) e [Routes API](https://developers.google.com/maps/documentation/routes/compute_route_directions).
 
 ## 10. Objetivo
 

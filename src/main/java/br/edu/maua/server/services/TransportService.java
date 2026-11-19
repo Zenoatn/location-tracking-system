@@ -4,6 +4,8 @@ import br.edu.maua.datamanager.dao.ScheduleDao;
 import br.edu.maua.datamanager.dao.VehicleDao;
 import br.edu.maua.model.ActiveVehicle;
 import br.edu.maua.model.ScheduleEntry;
+import br.edu.maua.model.VehicleOption;
+import br.edu.maua.model.WaitingDriver;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -27,5 +29,13 @@ public class TransportService {
 
     public List<ScheduleEntry> getSchedules(String direction, String dayType) throws SQLException {
         return scheduleDao.findActive(direction, dayType);
+    }
+
+    public List<VehicleOption> getAvailableVehicles() throws SQLException {
+        return vehicleDao.findAvailable();
+    }
+
+    public List<WaitingDriver> getWaitingDrivers(String location) throws SQLException {
+        return vehicleDao.findWaitingDrivers(location);
     }
 }

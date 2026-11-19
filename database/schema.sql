@@ -22,10 +22,23 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
+    current_status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE',
+    current_vehicle_id BIGINT NULL UNIQUE,
+    waiting_location VARCHAR(20) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_users_role
-        CHECK (role IN ('DRIVER', 'ADMIN'))
+        CHECK (role IN ('DRIVER', 'ADMIN')),
+    CONSTRAINT chk_users_current_status
+        CHECK (current_status IN ('AVAILABLE', 'WAITING', 'ON_TRIP')),
+    CONSTRAINT chk_users_waiting_location
+        CHECK ((current_status = 'WAITING' AND waiting_location IS NOT NULL
+                AND waiting_location IN ('IMT', 'ESTACAO'))
+            OR (current_status <> 'WAITING' AND waiting_location IS NULL)),
+    CONSTRAINT chk_users_state_vehicle
+        CHECK ((current_status = 'AVAILABLE' AND current_vehicle_id IS NULL)
+            OR (current_status IN ('WAITING', 'ON_TRIP') AND current_vehicle_id IS NOT NULL)),
+    INDEX idx_users_waiting (current_status, waiting_location)
 ) ENGINE=InnoDB;
 
 -- =====================================================
@@ -36,11 +49,26 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS vehicles (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     identification VARCHAR(50) NOT NULL UNIQUE,
-    type VARCHAR(50),
+    type VARCHAR(50) NOT NULL,
     description VARCHAR(255),
     active BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT chk_vehicles_type
+        CHECK (type IN ('MICRO_ONIBUS', 'ONIBUS', 'VAN')),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
+-- Added after vehicles exists so fresh installations can create the FK.
+SET @fk_users_vehicle_exists = (
+    SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
+      AND CONSTRAINT_NAME = 'fk_users_current_vehicle'
+);
+SET @add_users_vehicle_fk = IF(@fk_users_vehicle_exists = 0,
+    'ALTER TABLE users ADD CONSTRAINT fk_users_current_vehicle FOREIGN KEY (current_vehicle_id) REFERENCES vehicles(id)',
+    'SELECT 1');
+PREPARE add_users_vehicle_fk_stmt FROM @add_users_vehicle_fk;
+EXECUTE add_users_vehicle_fk_stmt;
+DEALLOCATE PREPARE add_users_vehicle_fk_stmt;
 
 -- =====================================================
 -- TABLE: trips
@@ -55,6 +83,10 @@ CREATE TABLE IF NOT EXISTS trips (
     end_time TIMESTAMP NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     direction VARCHAR(50) NOT NULL,
+    active_driver_id BIGINT GENERATED ALWAYS AS
+        (CASE WHEN status = 'ACTIVE' THEN driver_id ELSE NULL END) STORED,
+    active_vehicle_id BIGINT GENERATED ALWAYS AS
+        (CASE WHEN status = 'ACTIVE' THEN vehicle_id ELSE NULL END) STORED,
 
     CONSTRAINT fk_trips_driver
         FOREIGN KEY (driver_id)
@@ -69,7 +101,9 @@ CREATE TABLE IF NOT EXISTS trips (
 
     INDEX idx_trips_status (status),
     INDEX idx_trips_driver (driver_id),
-    INDEX idx_trips_vehicle (vehicle_id)
+    INDEX idx_trips_vehicle (vehicle_id),
+    UNIQUE KEY uq_trips_one_active_driver (active_driver_id),
+    UNIQUE KEY uq_trips_one_active_vehicle (active_vehicle_id)
 ) ENGINE=InnoDB;
 
 -- =====================================================

@@ -23,8 +23,10 @@ public class UserDao {
     }
 
     public Optional<UserCredential> findActiveByEmail(String email) throws SQLException {
-        String sql = "SELECT id, name, email, password_hash, role "
-                + "FROM users WHERE email = ? AND active = TRUE";
+        String sql = "SELECT u.id, u.name, u.email, u.password_hash, u.role, u.current_status, "
+                + "u.current_vehicle_id, u.waiting_location, v.identification vehicle_identification, v.type vehicle_type "
+                + "FROM users u LEFT JOIN vehicles v ON v.id = u.current_vehicle_id "
+                + "WHERE u.email = ? AND u.active = TRUE";
         try (Connection connection = DatabaseConnection.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, email);
@@ -35,7 +37,11 @@ public class UserDao {
                 return Optional.of(new UserCredential(
                         result.getLong("id"), result.getString("name"),
                         result.getString("email"), result.getString("password_hash"),
-                        result.getString("role")));
+                        result.getString("role"), result.getString("current_status"),
+                        result.getObject("current_vehicle_id") == null ? null
+                                : result.getLong("current_vehicle_id"),
+                        result.getString("waiting_location"), result.getString("vehicle_identification"),
+                        result.getString("vehicle_type")));
             }
         }
     }

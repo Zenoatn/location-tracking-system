@@ -16,6 +16,10 @@ O fluxo geral da aplicação é:
 
 ## 2. Organização das camadas
 
+### Clientes independentes
+
+`br.edu.maua.client.driver.DriverApp` inicia o login/painel do colaborador e `br.edu.maua.client.passenger.PassengerApp` inicia o painel público. Ambos reutilizam o protocolo e `ServerClient`; `ClientApp` permanece como ponto de entrada legado. `LocationProvider` separa a fonte de coordenadas; a implementação atual aceita coordenadas manuais e não simula GPS. O passageiro usa `MapPanel` (Maps Static API) e `RoutesEtaClient` (Routes API). Chaves e coordenadas são configuração externa.
+
 ### 2.1 Client
 
 **Responsável:** integrante Client.
@@ -26,7 +30,9 @@ Pacotes:
 
 - `client.interfaces`: janela Swing, tabelas, filtros e diálogos escritos manualmente.
 - `client.communication`: cliente de socket TCP que envia e recebe JSON em UTF-8.
-- `client.ClientApp`: ponto de entrada gráfico do cliente.
+- `client.driver.DriverApp`: ponto de entrada do colaborador.
+- `client.passenger.PassengerApp`: ponto de entrada do passageiro.
+- `client.ClientApp`: ponto de entrada legado preservado.
 
 Responsabilidades:
 

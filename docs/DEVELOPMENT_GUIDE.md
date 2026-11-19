@@ -1,5 +1,14 @@
 # Development Guide — Location Tracking System
 
+## Novas aplicações Swing
+
+- Colaborador: `br.edu.maua.client.driver.DriverApp`.
+- Passageiro: `br.edu.maua.client.passenger.PassengerApp`.
+- Compatibilidade: `br.edu.maua.client.ClientApp` continua disponível.
+- Localização: coordenada manual com envio periódico configurado por `LOCATION_UPDATE_INTERVAL_MS` (padrão 5000 ms); GPS real não está implementado.
+- Mapa/estimativa: configurar `MAPS_STATIC_API_KEY`, `GOOGLE_MAPS_ROUTES_API_KEY` e coordenadas confirmadas `MAP_IMT_LAT/LNG`, `MAP_ESTACAO_LAT/LNG`. APIs oficiais: https://developers.google.com/maps/documentation/maps-static/start e https://developers.google.com/maps/documentation/routes/compute_route_directions.
+- Banco existente: backup e execução única de `database/migration_001_operational_states.sql`; banco novo usa `database/schema.sql`.
+
 ## 1. Objetivo
 
 Este documento define as regras de desenvolvimento, organização do código e integração entre os integrantes do Location Tracking System.
@@ -10,7 +19,7 @@ O objetivo é permitir que os integrantes trabalhem simultaneamente em diferente
 
 Todos os integrantes deverão utilizar:
 
-- JDK 26.
+- JDK 21 ou superior (o build está configurado com `--release 21`).
 - Apache Maven 3.10.0.
 - MySQL Server 8.0 ou superior.
 - Git.

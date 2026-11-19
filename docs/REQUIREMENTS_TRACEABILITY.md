@@ -25,6 +25,17 @@ Este documento transforma os requisitos mínimos da especificação do Projeto I
 | Entrega e apresentação em 01/12/2026 | Preparar pacote final com fonte, documentação e slides; confirmar submissão no CanvasLMS | Checklist de entrega | Prazo da especificação |
 | Relatar problemas aos professores para decisão | Registrar bloqueios que dependam de decisão da disciplina e encaminhar ao grupo/professor | Registro na ata/documentação do grupo | Contínuo |
 
+## Fluxo dos novos clientes
+
+| Requisito | Evidência | Estado |
+|---|---|---|
+| Aplicações separadas de colaborador e passageiro | `client.driver.DriverApp`, `client.passenger.PassengerApp`; `ClientApp` preservado | Implementado; depende de servidor/MySQL configurados |
+| Estado restaurável e reserva exclusiva | Campos operacionais em `users`, transações JDBC e índices únicos | Implementado; aplicar migração em instalações existentes |
+| Localização periódica sem inventar GPS | `LocationProvider`, `ManualLocationProvider`, intervalo configurável | Coordenadas manuais implementadas; GPS real pendente |
+| Mapa e ETA | `MapPanel`, `RoutesEtaClient` | Implementado; requer chaves e coordenadas confirmadas |
+| Consulta de espera e horários | Novas operações do protocolo e tabela Swing | Implementado; validar integração com MySQL |
+| Testes | `src/test/java` | Testes unitários de protocolo/entrada manual; concorrência e persistência requerem MySQL e permanecem pendentes |
+
 ## Decisões técnicas compatíveis
 
 - Gson é usado para processar JSON; o professor confirmou que dependências externas são permitidas se os requisitos da disciplina forem mantidos.

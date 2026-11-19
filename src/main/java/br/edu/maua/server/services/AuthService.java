@@ -36,13 +36,17 @@ public class AuthService {
             }
             UserCredential user = candidate.get();
             return new LoginSession(user.getId(), user.getName(), user.getRole(),
-                    sessionRegistry.create(user));
+                    sessionRegistry.create(user), user.getCurrentStatus(),
+                    user.getCurrentVehicleId(), user.getWaitingLocation(),
+                    user.getCurrentVehicleIdentification(), user.getCurrentVehicleType());
         } finally {
             Arrays.fill(password, '\0');
         }
     }
 
-    public record LoginSession(long userId, String name, String role, String token) {
+    public record LoginSession(long userId, String name, String role, String token,
+            String currentStatus, Long currentVehicleId, String waitingLocation,
+            String currentVehicleIdentification, String currentVehicleType) {
     }
 
     private static String createDummyPasswordHash() {

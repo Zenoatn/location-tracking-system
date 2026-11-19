@@ -21,6 +21,10 @@ public class Protocol {
     public static final String GET_ACTIVE_VEHICLES = "GET_ACTIVE_VEHICLES";
     public static final String GET_SCHEDULE = "GET_SCHEDULE";
     public static final String END_TRIP = "END_TRIP";
+    public static final String GET_AVAILABLE_VEHICLES = "GET_AVAILABLE_VEHICLES";
+    public static final String DECLARE_WAIT = "DECLARE_WAIT";
+    public static final String CANCEL_WAIT = "CANCEL_WAIT";
+    public static final String GET_WAITING_DRIVERS = "GET_WAITING_DRIVERS";
 
     public static final String OK = "OK";
     public static final String ERROR_STATUS = "ERROR";

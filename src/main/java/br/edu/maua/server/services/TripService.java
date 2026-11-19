@@ -23,7 +23,8 @@ public class TripService {
     public StartedTrip start(String token, long vehicleId, String direction)
             throws SQLException, OperationException {
         UserSession session = requireDriver(token);
-        if (vehicleId <= 0 || direction == null || direction.isBlank() || direction.length() > 50) {
+        if (vehicleId <= 0 || direction == null || !java.util.Set.of("ESTACAO_TO_IMT", "IMT_TO_ESTACAO",
+                "CAMPUS", "CENTRO").contains(direction)) {
             throw new OperationException("VALIDATION_ERROR", "vehicleId ou direction inválido.");
         }
         TripDao.StartResult result = tripDao.start(session.getUserId(), vehicleId, direction.trim());
@@ -34,6 +35,28 @@ public class TripService {
             case ACTIVE_TRIP_EXISTS -> throw new OperationException("CONFLICT",
                     "O motorista ou veículo já possui uma viagem ativa.");
         };
+    }
+
+    public void declareWait(String token, long vehicleId, String location)
+            throws SQLException, OperationException {
+        UserSession session = requireDriver(token);
+        if (vehicleId <= 0 || !java.util.Set.of("IMT", "ESTACAO").contains(location))
+            throw new OperationException("VALIDATION_ERROR", "Veículo ou local de espera inválido.");
+        mapStateResult(tripDao.declareWait(session.getUserId(), vehicleId, location));
+    }
+
+    public void cancelWait(String token) throws SQLException, OperationException {
+        UserSession session = requireDriver(token);
+        mapStateResult(tripDao.cancelWait(session.getUserId()));
+    }
+
+    private void mapStateResult(TripDao.StateResult result) throws OperationException {
+        switch (result) {
+            case OK -> { }
+            case DRIVER_UNAVAILABLE -> throw new OperationException("UNAUTHORIZED", "A conta não está ativa.");
+            case VEHICLE_UNAVAILABLE -> throw new OperationException("CONFLICT", "O veículo está reservado ou indisponível.");
+            case INVALID_STATE -> throw new OperationException("INVALID_STATE", "A transição de estado não é permitida.");
+        }
     }
 
     public void updateLocation(String token, long tripId, double latitude, double longitude,
@@ -67,6 +90,10 @@ public class TripService {
         UserSession session = requireDriver(token);
         OptionalLong activeTrip = tripDao.findActiveTrip(session.getUserId());
         return activeTrip.isPresent() ? activeTrip.getAsLong() : null;
+    }
+
+    public long driverId(String token) throws OperationException {
+        return requireDriver(token).getUserId();
     }
 
     private UserSession requireDriver(String token) throws OperationException {
