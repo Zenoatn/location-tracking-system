@@ -26,7 +26,8 @@ public class ServerClient {
         try (Socket socket = TlsSupport.connect(host, port, 5000, 7000)) {
             try (PrintWriter output = new PrintWriter(
                          new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
-                 BufferedReader input = new BufferedReader(
+                         
+                BufferedReader input = new BufferedReader(
                          new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
                 output.println(request);
                 String response = input.readLine();

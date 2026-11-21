@@ -28,13 +28,39 @@ public class UserCredential {
         this.currentVehicleType = currentVehicleType;
     }
 
-    public long getId() { return id; }
-    public String getName() { return name; }
-    public String getPasswordHash() { return passwordHash; }
-    public String getRole() { return role; }
-    public String getCurrentStatus() { return currentStatus; }
-    public Long getCurrentVehicleId() { return currentVehicleId; }
-    public String getWaitingLocation() { return waitingLocation; }
-    public String getCurrentVehicleIdentification() { return currentVehicleIdentification; }
-    public String getCurrentVehicleType() { return currentVehicleType; }
+    public long getId(){ 
+        return id; 
+    }
+    
+    public String getName(){ 
+        return name; 
+    }
+
+    public String getPasswordHash(){ 
+        return passwordHash; 
+    }
+
+    public String getRole(){
+        return role; 
+    }
+
+    public String getCurrentStatus(){ 
+        return currentStatus; 
+    }
+
+    public Long getCurrentVehicleId(){ 
+        return currentVehicleId; 
+    }
+
+    public String getWaitingLocation(){ 
+        return waitingLocation; 
+    }
+
+    public String getCurrentVehicleIdentification(){ 
+        return currentVehicleIdentification; 
+    }
+
+    public String getCurrentVehicleType(){ 
+        return currentVehicleType; 
+    }
 }

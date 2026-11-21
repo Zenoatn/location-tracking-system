@@ -9,8 +9,7 @@ public class ScheduleEntry {
     private final String direction;
     private final String dayType;
 
-    public ScheduleEntry(long vehicleId, String identification, String type,
-            String departureTime, String direction, String dayType) {
+    public ScheduleEntry(long vehicleId, String identification, String type, String departureTime, String direction, String dayType) {
         this.vehicleId = vehicleId;
         this.identification = identification;
         this.type = type;

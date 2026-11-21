@@ -16,8 +16,19 @@ public class UserSession {
         this.expiresAt = expiresAt;
     }
 
-    public long getUserId() { return userId; }
-    public String getName() { return name; }
-    public String getRole() { return role; }
-    public Instant getExpiresAt() { return expiresAt; }
+    public long getUserId(){ 
+        return userId; 
+    }
+    
+    public String getName(){ 
+        return name; 
+    }
+
+    public String getRole(){
+        return role; 
+    }
+
+    public Instant getExpiresAt(){ 
+        return expiresAt; 
+    }
 }
